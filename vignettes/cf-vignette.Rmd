@@ -1,0 +1,93 @@
+---
+title: "civicfeedR: Getting News From CivicFeed"
+author: "Santoshi G"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{civicfeedR: Getting News From CivicFeed}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+library(civicfeedR)
+library(dplyr)
+```
+
+This vignette provides an overview of the `civicfeedR` package, which can be used to retrieve and restructure data from the CivicFeed News API.
+
+## Looking up source IDs
+
+If you're interested in exploring news from specific sources, use `lookup_id` to find source IDs.
+
+```{r}
+## look up IDs of news sources of interest using keywords
+bbc = lookup_id("bbc")
+nyt = lookup_id("new york times")
+
+## inspect relevant results
+bbc
+nyt
+
+## store IDs of news sources of interest 
+sources = c(bbc[[1]], nyt[[7]])
+```
+
+## Getting the news
+
+To retrieve news data, make API requests using `get_news`.
+
+```{r}
+## check number of results corresponding to desired queries, if necessary
+results(q = "congress", sources = sources, from = "2018-12-01")
+
+## get 30 most popular bbc/nyt articles posted after 2018-12-01 and corresponding to query "congress" 
+popular = get_news(
+  q = "congress", 
+  sources = sources, 
+  from = "2018-12-01", 
+  sort = "socialcount_last"
+)
+
+## get 30 bbc/nyt articles posted after 2018-12-01 and most relevant to query "congress" 
+relevant = get_news(
+  q = "congress", 
+  sources = sources, 
+  from = "2018-12-01", 
+  sort = "_score"
+  )
+```
+
+## Creating a dataset
+
+Using the `from` family of functions, create your own dataset from the data retrieved.
+
+```{r}
+## create a tibble of titles from "popular" and "relevant"
+titles = titles_from(popular, relevant)
+
+## create a tibble of snippets from "popular" and "relevant"
+snippets = snippets_from(popular, relevant)
+
+## combine the tibbles by article_id
+df = dplyr::full_join(titles, snippets, by = "article_id")
+df
+```
+
+## Studying specific entities
+
+If you're interested in the news coverage of specific entities, take advantage of the `mentioned` function.
+
+```{r}
+## inspect names of entities of interest in "popular" and "relevant"
+entities_from(popular, relevant)
+
+## get titles, dates published and social media shares from popular and relevant articles abot congress mentioning nancy pelosi and chuck schumer
+mentioned(popular, relevant, entities = c("nancy pelosi", "chuck schumer"), shares = TRUE)
+```
+
